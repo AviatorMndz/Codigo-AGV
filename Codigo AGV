@@ -184,10 +184,12 @@ int main(void)
 					HAL_Delay(60);
 					float d3 = medirDistancia(TRIG3_PORT, TRIG3_PIN, Echo3_PORT, Echo3_PIN);
 
+					/*
 					sprintf(uartBuf, "D1=%.1f | D2=%.1f | D3=%.1f\r\n", d1, d2, d3);
 					HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 					HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 					HAL_Delay(100);
+					*/
 
 					if ((d1 >= 20) && (d2 >= 20) && (d3 >= 20))
 					{
@@ -199,8 +201,8 @@ int main(void)
 							HAL_Delay(1000);
 							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
 							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-							sprintf (uartBuf, "R-S-R");
-							HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							sprintf (uartBuf, "R-S-R\r\n");
+							HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if (((sensorState1 == GPIO_PIN_SET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_SET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_RESET)))
@@ -210,8 +212,8 @@ int main(void)
 							 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 							 HAL_Delay(1000);
 							 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
-							 sprintf (uartBuf, "S-R-R");
-							 HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							 sprintf (uartBuf, "S-R-R\r\n");
+							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_SET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_SET)))
@@ -221,8 +223,8 @@ int main(void)
 						  	 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);
 						  	 HAL_Delay(1000);
 						  	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-						  	 sprintf (uartBuf, "R-R-S");
-						  	 HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+						  	 sprintf (uartBuf, "R-R-S\r\n");
+						  	 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_RESET)))
@@ -231,13 +233,13 @@ int main(void)
 							 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
 							 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 							 sprintf(uartBuf, "Stop\r\n");
-							 HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else
 						 {
-							 sprintf(uartBuf, "No funciona");
-							 HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							 sprintf(uartBuf, "No funciona\r\n");
+							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 					}
 					else
@@ -246,7 +248,7 @@ int main(void)
 						__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
 						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 						sprintf(uartBuf, "Stop\r\n");
-						HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+						HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 					}
 
 				}
@@ -261,8 +263,9 @@ int main(void)
 							sprintf(uartBuf, "Enfrente\r\n");
 							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 							/*
+							 *
 							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 95);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);27]
 							HAL_Delay(3000);
 							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
 							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
