@@ -57,8 +57,8 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
-void delay_us(uint16_t us);
-void triggerSensor(void);
+void delay_us(uint32_t us);
+void triggerSensor(GPIO_TypeDef* port, uint16_t pin);
 uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin);
 /* USER CODE END PFP */
 
@@ -119,23 +119,24 @@ uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin);
 
 // =================== ULTRASÓNICOS ===================
 
-#define TRIG_PORT GPIOB
-#define TRIG_PIN  GPIO_PIN_0
+#define TRIG1_PORT GPIOB
+#define TRIG1_PIN  GPIO_PIN_0
+
+#define TRIG2_PORT GPIOA
+#define TRIG2_PIN  GPIO_PIN_11
+
+#define TRIG3_PORT GPIOA
+#define TRIG3_PIN  GPIO_PIN_12
 
 #define Echo1_PORT GPIOB
-#define Echo1_PIN  GPIO_PIN_1
+#define Echo1_PIN  GPIO_PIN_4
 
 #define Echo2_PORT GPIOB
-#define Echo2_PIN  GPIO_PIN_4
+#define Echo2_PIN  GPIO_PIN_5
 
 #define Echo3_PORT GPIOB
-#define Echo3_PIN  GPIO_PIN_5
+#define Echo3_PIN  GPIO_PIN_6
 
-#define Echo4_PORT GPIOB
-#define Echo4_PIN  GPIO_PIN_6
-
-#define Echo5_PORT GPIOB
-#define Echo5_PIN  GPIO_PIN_7
 /* USER CODE END 0 */
 
 /**
@@ -144,8 +145,16 @@ uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin);
   */
 int main(void)
 {
-	 /* USER CODE BEGIN 1 */
 
+	 /* USER CODE BEGIN 1 */
+	uint32_t numTicks1 = 0;
+	float d1;
+	uint32_t numTicks2 = 0;
+	float d2;
+	uint32_t numTicks3 = 0;
+	float d3;
+	const float Vsonido = 0.0343f; //cm/us
+	char uartBuf[50];
 	  /* USER CODE END 1 */
 
 	  /* MCU Configuration--------------------------------------------------------*/
@@ -170,40 +179,101 @@ int main(void)
 	  MX_TIM2_Init();
 	  MX_TIM3_Init();
 
-	  const float Vsonido = 0.0343f; // cm/us
-	  float distancias[5];
-	  char uartBuf[50];
-
-	  GPIO_TypeDef* echoPorts[5] = {GPIOB, GPIOB, GPIOB, GPIOB, GPIOB};
-	  uint16_t echoPins[5] = {GPIO_PIN_1, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7};
-
-
-	  /* Dentro de USER CODE BEGIN 2 */
-	  HAL_TIM_Base_Start(&htim2); // Iniciar el timer para delay_us y medición
-
-	  /* Dentro del while(1) */
 	  while (1)
-	  {
-		  sprintf(uartBuf, "Hola desde STM32!\r\n");
-		  HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), HAL_MAX_DELAY);
-		  HAL_Delay(1000);
-	      for (int i = 0; i < 5; i++)
-	      {
-	          triggerSensor(); // Enviar pulso común
-	          uint32_t tiempo = readEcho(echoPorts[i], echoPins[i]); // Medir ECHO
-	          distancias[i] = (tiempo * Vsonido) / 2.0f; // Calcular distancia
-	          HAL_Delay(60); // Evitar interferencias por eco cruzado
+	    {
+		  HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 
-	          // ENviar por UART
-	          sprintf(uartBuf, "Sensor %d: %.1f cm\r\n", i + 1, distancias[i]);
-	          HAL_UART_Transmit(&huart2, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-	      }
+		  /* USER CODE END WHILE */
 
+		  //-------------------------------------------------PRIMER SENSOR ULTRASONICO-----------------------------------------------------//
+
+		  //Trig en bajo
+
+		  HAL_GPIO_WritePin(TRIG1_PORT, TRIG1_PIN, GPIO_PIN_RESET); //PA0 Trig bajo
+		  delay_us(3);
+
+		  //pulso de 10 us
+		  HAL_GPIO_WritePin(TRIG1_PORT, TRIG1_PIN, GPIO_PIN_SET); //
+		  delay_us(10);
+		  HAL_GPIO_WritePin(TRIG1_PORT, TRIG1_PIN, GPIO_PIN_RESET); //
+
+		  while (HAL_GPIO_ReadPin(Echo1_PORT, Echo1_PIN) == GPIO_PIN_RESET);  // Esperar ECHO alto
+		  numTicks1 = 0;
+
+		  //esperamos al ECHO
+		  while (HAL_GPIO_ReadPin(Echo1_PORT, Echo1_PIN) == GPIO_PIN_SET)
+		  {
+			  numTicks1++;
+	  		  delay_us(2); //Aproximadamente 2.8 us
+		  }
+		  //calcular distancia
+		  d1 = (numTicks1 * 2.8f)*Vsonido/2;
+
+		  delay_us(60);
+
+		  //-------------------------------------------------SEGUNDO SENSOR ULTRASONICO-----------------------------------------------------//
+
+		  //Trig en bajo
+
+  		  HAL_GPIO_WritePin(TRIG2_PORT, TRIG2_PIN, GPIO_PIN_RESET); //PA0 Trig bajo
+  		  delay_us(3);
+
+  		  //pulso de 10 us
+  		  HAL_GPIO_WritePin(TRIG2_PORT, TRIG2_PIN, GPIO_PIN_SET); //
+  		  delay_us(10);
+  		  HAL_GPIO_WritePin(TRIG2_PORT, TRIG2_PIN, GPIO_PIN_RESET); //
+
+  		  while (HAL_GPIO_ReadPin(Echo2_PORT, Echo2_PIN) == GPIO_PIN_RESET);  // Esperar ECHO alto
+  		  numTicks2 = 0;
+
+  		  //esperamos al ECHO
+  		  while (HAL_GPIO_ReadPin(Echo2_PORT, Echo2_PIN) == GPIO_PIN_SET)
+  		  {
+  			  numTicks2++;
+  	  		  delay_us(2); //Aproximadamente 2.8 us
+  		  }
+  		  //calcular distancia
+  		  d2 = (numTicks2 * 2.8f)*Vsonido/2;
+
+  		//-------------------------------------------------TERCER SENSOR ULTRASONICO-----------------------------------------------------//
+
+		  //Trig en bajo
+
+  		  HAL_GPIO_WritePin(TRIG3_PORT, TRIG3_PIN, GPIO_PIN_RESET); //PA0 Trig bajo
+  		  delay_us(3);
+
+  		  //pulso de 10 us
+  		  HAL_GPIO_WritePin(TRIG3_PORT, TRIG3_PIN, GPIO_PIN_SET); //
+ 		  delay_us(10);
+  		  HAL_GPIO_WritePin(TRIG3_PORT, TRIG3_PIN, GPIO_PIN_RESET); //
+
+		  while (HAL_GPIO_ReadPin(Echo3_PORT, Echo3_PIN) == GPIO_PIN_RESET);  // Esperar ECHO alto
+  		  numTicks3 = 0;
+
+  		  //esperamos al ECHO
+  		  while (HAL_GPIO_ReadPin(Echo3_PORT, Echo3_PIN) == GPIO_PIN_SET)
+  		  {
+  			  numTicks3++;
+  		  	  delay_us(2); //Aproximadamente 2.8 us
+   		  }
+
+  		  //calcular distancia
+   		  d3 = (numTicks3 * 2.8f)*Vsonido/2;
+
+		  //enviar al serial
+		  sprintf(uartBuf, "Distancia 1 = %.1f\r\n", d1);
+		  HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+		  sprintf(uartBuf, "Distancia 2 = %.1f\r\n", d2);
+		  HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+		  sprintf(uartBuf, "Distancia 3 = %.1f\r\n", d3);
+		  HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+		  HAL_Delay(1000); //esperar 1 segundo
+	    }
+	    /* USER CODE END 3 */
+}
 
 		    /* USER CODE BEGIN 3 */
-	  }
 	  /* USER CODE END 3 */
-}
 
 /**
   * @brief System Clock Configuration
@@ -414,7 +484,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7
+                          |GPIO_PIN_11|GPIO_PIN_12, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
@@ -425,8 +496,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA4 PA5 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7;
+  /*Configure GPIO pins : PA1 PA4 PA5 PA7
+                           PA11 PA12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7
+                          |GPIO_PIN_11|GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -445,19 +518,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 PB4 PB5 PB6
-                           PB7 PB8 PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6
-                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
   /*Configure GPIO pin : PA10 */
   GPIO_InitStruct.Pin = GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB4 PB5 PB6 PB8
+                           PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_8
+                          |GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
@@ -469,25 +542,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void delay_us(uint16_t us) {
-    __HAL_TIM_SET_COUNTER(&htim2, 0);
-    while (__HAL_TIM_GET_COUNTER(&htim2) < us);
-}
 
-void triggerSensor(void) {
-    HAL_GPIO_WritePin(TRIG_PORT, TRIG_PIN, GPIO_PIN_RESET);
-    delay_us(3);
-    HAL_GPIO_WritePin(TRIG_PORT, TRIG_PIN, GPIO_PIN_SET);
-    delay_us(10);
-    HAL_GPIO_WritePin(TRIG_PORT, TRIG_PIN, GPIO_PIN_RESET);
-}
-
-uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin) {
-    while (HAL_GPIO_ReadPin(port, pin) == GPIO_PIN_RESET);
-    uint32_t start = __HAL_TIM_GET_COUNTER(&htim2);
-    while (HAL_GPIO_ReadPin(port, pin) == GPIO_PIN_SET);
-    uint32_t end = __HAL_TIM_GET_COUNTER(&htim2);
-    return end - start;
+void delay_us(uint32_t us)
+{
+	if(us < 2) us = 2;
+	TIM2->ARR = us -1; //Pone el valor del ARR
+	TIM2->EGR = 1; //Reiniciamos el timer
+	TIM2->SR &= ~1; //Reiniciar la bandera
+	TIM2->CR1 |= 1;//Iniciamos el contador
+	while ((TIM2->SR&0x0001) !=1); //Esperamos a cumplir un ciclo entero
+	TIM2 -> SR &= ~(0x0001);
 }
 /* USER CODE END 4 */
 
