@@ -24,7 +24,7 @@
 #include <string.h>
 #include <stdio.h>
 /* USER CODE END Includes */
-#include "stm32f1xx_hal_tim.h"
+
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
@@ -62,6 +62,11 @@ static void MX_USART1_UART_Init(void);
 void delay_us(uint32_t us);
 float medirDistancia(GPIO_TypeDef* trig_port, uint16_t trig_pin, GPIO_TypeDef* echo_port, uint16_t echo_pin);
 uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin);
+void moverAdelante(uint16_t velocidad);
+void moverAtras(uint16_t velocidad);
+void moverIzquierda(uint16_t velocidad);
+void moverDerecha(uint16_t velocidad);
+void detenerMotores(void);
 
 /* USER CODE END PFP */
 
@@ -121,6 +126,7 @@ uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin);
 #define Echo3_PIN  GPIO_PIN_6
 
 
+/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
@@ -129,18 +135,11 @@ uint32_t readEcho(GPIO_TypeDef* port, uint16_t pin);
 int main(void)
 {
 	/* USER CODE BEGIN 1 */
-	//Iniciar PWM
-	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 
-	  // Puente H
-	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
-	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 
-		char uartBuf[50];
-		uint8_t rx_data;
+
+		//char uartBuf[50];
+		//uint8_t rx_data;
 
 		  /* USER CODE END 1 */
 
@@ -166,15 +165,57 @@ int main(void)
 		  MX_USART1_UART_Init();
 		  MX_TIM2_Init();
 		  MX_TIM3_Init();
+
+			//Iniciar PWM
+			  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); // Motor 1 RPWM
+			  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); // Motor 1 LPWM
+			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Motor 2 RPWM
+			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4); // Motor 2 LPWM
+
+			  // Puente H
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);  // Motor 1 R_EN
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);  // Motor 1 L_EN
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);  // Motor 2 R_EN
+			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_SET);  // Motor 2 L_EN
+			  char uartBuf[50];
+			  uint8_t rx_data;
+			  uint16_t velocidadPWM = 30;
+
+
 		  while (1)
 		    {
+			  if (HAL_UART_Receive(&huart1, &rx_data, 1, 100) == HAL_OK)
+			  {
+			      switch(rx_data)
+			      {
+			          case '1': velocidadPWM = 10; break;
+			          case '2': velocidadPWM = 20; break;
+			          case '3': velocidadPWM = 30; break;
+			          case '4': velocidadPWM = 40; break;
+			          case '5': velocidadPWM = 50; break;
+			          case '6': velocidadPWM = 60; break;
+			          case '7': velocidadPWM = 70; break;
+			          case '8': velocidadPWM = 80; break;
+			          case '9': velocidadPWM = 85; break;
+			          case '0': velocidadPWM = 90; break; // Máxima
+			          case 'F': moverAdelante(velocidadPWM); break;
+			          case 'B': moverAtras(velocidadPWM); break;
+			          case 'L': moverIzquierda(velocidadPWM); break;
+			          case 'R': moverDerecha(velocidadPWM); break;
+			          case 'S': detenerMotores(); break;
+			          default:
+			              sprintf(uartBuf, "Comando inválido\r\n");
+			              HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+			              break;
+			      }
+			  }
+			  /*
 			  GPIO_PinState sensorState1 = HAL_GPIO_ReadPin (Sensor1_PORT, Sensor1_PIN);
 			  GPIO_PinState sensorState2 = HAL_GPIO_ReadPin (Sensor2_PORT, Sensor2_PIN);
 			  GPIO_PinState sensorState3 = HAL_GPIO_ReadPin (Sensor3_PORT, Sensor3_PIN);
 			  GPIO_PinState sensorState4 = HAL_GPIO_ReadPin (Sensor4_PORT, Sensor4_PIN);
 			  GPIO_PinState sensorState5 = HAL_GPIO_ReadPin (Sensor5_PORT, Sensor5_PIN);
 			  GPIO_PinState sensorState6 = HAL_GPIO_ReadPin (Sensor6_PORT, Sensor6_PIN);
-
 			  if (HAL_GPIO_ReadPin(SWITCH_PORT, SWITCH_PIN) == GPIO_PIN_SET)
 				{
 					// Switch activado → medir distancias
@@ -184,69 +225,52 @@ int main(void)
 					HAL_Delay(60);
 					float d3 = medirDistancia(TRIG3_PORT, TRIG3_PIN, Echo3_PORT, Echo3_PIN);
 
-					/*
 					sprintf(uartBuf, "D1=%.1f | D2=%.1f | D3=%.1f\r\n", d1, d2, d3);
 					HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-					HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 					HAL_Delay(100);
-					*/
+
 
 					if ((d1 >= 20) && (d2 >= 20) && (d3 >= 20))
 					{
 						if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_SET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_SET) && (sensorState6 == GPIO_PIN_RESET)))
 						{
-							// Linea Negra (No reflexion)
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 95);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);
-							HAL_Delay(1000);
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-							sprintf (uartBuf, "R-S-R\r\n");
+							moverAdelante();
+							sprintf (uartBuf, "Adelante\r\n");
 							HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if (((sensorState1 == GPIO_PIN_SET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_SET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_RESET)))
 						 {
+							 moverDerecha();
 							 //Fondo Blanco (Reflexion)
-							 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 95);
-							 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-							 HAL_Delay(1000);
-							 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
-							 sprintf (uartBuf, "S-R-R\r\n");
+							 sprintf (uartBuf, "Derecha\r\n");
 							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_SET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_SET)))
 						 {
-							 //Fondo Blanco (Reflexion)
-							 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-						  	 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);
-						  	 HAL_Delay(1000);
-						  	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-						  	 sprintf (uartBuf, "R-R-S\r\n");
+							 moverIzquierda();
+						  	 sprintf (uartBuf, "Izquierda\r\n");
 						  	 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_RESET)))
 						 {
-							 // Nada se mueve
-							 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-							 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+							 detenerMotores();
 							 sprintf(uartBuf, "Stop\r\n");
 							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else
 						 {
+							 detenerMotores();
 							 sprintf(uartBuf, "No funciona\r\n");
 							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 					}
 					else
 					{
-						// Nada se mueve
-						__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+						detenerMotores();
 						sprintf(uartBuf, "Stop\r\n");
 						HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 					}
@@ -256,78 +280,37 @@ int main(void)
 				{
 					rx_data = 0;
 					// Switch desactivado → leer comandos Bluetooth
-					if (HAL_UART_Receive(&huart1, &rx_data, 1, 1) == HAL_OK)
+					if (HAL_UART_Receive(&huart1, &rx_data, 1, 100) == HAL_OK)
 					{
-						if (rx_data == 'E') //Enfrente
-						{
-							sprintf(uartBuf, "Enfrente\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-							/*
-							 *
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 95);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);27]
-							HAL_Delay(3000);
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-							*/
-						}
-						else if (rx_data == 'A') //Atras
-						{
-							sprintf(uartBuf, "Atras\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-							/*
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);   // IN1
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // IN2
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // IN3
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // IN4
-
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 95);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);
-							HAL_Delay(3000);
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-							*/
-
-						}
-						else if (rx_data == 'I') //Izquierda
-						{
-							sprintf(uartBuf, "Izquierda\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-							/*
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 95);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-							HAL_Delay(3000);
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 70);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-							*/
-						}
-						else if (rx_data == 'D') //Derecha
-						{
-							sprintf(uartBuf, "Derecha\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-							/*
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 95);
-							HAL_Delay(3000);
-							__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 70);
-							*/
-
-						}
-						else if (rx_data == 'S') //Stop
-						{
-							//__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-							//__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-							sprintf(uartBuf, "Stop\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-						}
-					}
+			      	  switch(rx_data)
+			      	  {
+			          	  case '1': velocidadPWM = 10; break;
+			          	  case '2': velocidadPWM = 20; break;
+			          	  case '3': velocidadPWM = 30; break;
+			          	  case '4': velocidadPWM = 40; break;
+			          	  case '5': velocidadPWM = 50; break;
+			          	  case '6': velocidadPWM = 60; break;
+			          	  case '7': velocidadPWM = 70; break;
+			          	  case '8': velocidadPWM = 80; break;
+			          	  case '9': velocidadPWM = 85; break;
+			          	  case '0': velocidadPWM = 90; break; // Máxima
+			          	  case 'F': moverAdelante(velocidadPWM); break;
+			          	  case 'B': moverAtras(velocidadPWM); break;
+			          	  case 'L': moverIzquierda(velocidadPWM); break;
+			          	  case 'R': moverDerecha(velocidadPWM); break;
+			          	  case 'S': detenerMotores(); break;
+			          	  default:
+			              	  sprintf(uartBuf, "Comando inválido\r\n");
+			              	  HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+			              	  break;
+			      }
+			  }
 
 				}
+			  */
 			}
 		   /* USER CODE END 3 */
-		   }
-
+}
 
 /**
   * @brief System Clock Configuration
@@ -390,7 +373,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 71;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 65535;
+  htim2.Init.Period = 100;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -417,6 +400,10 @@ static void MX_TIM2_Init(void)
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -449,7 +436,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 71;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 65535;
+  htim3.Init.Period = 100;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -476,6 +463,10 @@ static void MX_TIM3_Init(void)
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -570,25 +561,28 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  // Configuración AF para PA9 y PA10 (USART1)
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_RESET);
 
-  GPIO_InitStruct.Pin = GPIO_PIN_9 | GPIO_PIN_10;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;     // Alternate function push-pull
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7
                           |GPIO_PIN_11|GPIO_PIN_12, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA1 PA4 PA5 PA7
                            PA11 PA12 */
@@ -605,8 +599,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  /*Configure GPIO pins : PB0 PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -670,6 +664,52 @@ float medirDistancia(GPIO_TypeDef* trig_port, uint16_t trig_pin, GPIO_TypeDef* e
 	if (timeout == 0) return -1;
 
 	return (numTicks * 2.8f * Vsonido) / 2.0f;
+}
+
+void moverAdelante(uint16_t velocidad)
+{
+  // Motor 1 adelante
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, velocidad);  // L_PWM (PA0)
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);   // R_PWM (PB10)
+  // Motor 2 adelante
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, velocidad);  // L_PWM (PA6)
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);   // R_PWM (PB1)
+}
+
+void moverAtras(uint16_t velocidad)
+{
+  // Motor 1 atrás
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);   // L_PWM
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, velocidad);  // R_PWM
+  // Motor 2 atrás
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, velocidad);
+}
+
+void moverIzquierda(uint16_t velocidad)
+{
+  // Motor 1 avanza, Motor 2 se detiene
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, velocidad);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+}
+
+void moverDerecha(uint16_t velocidad)
+{
+  // Motor 2 avanza, Motor 1 se detiene
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, velocidad);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+}
+
+void detenerMotores()
+{
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 }
 /* USER CODE END 4 */
 
