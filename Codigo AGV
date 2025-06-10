@@ -184,83 +184,56 @@ int main(void)
 
 		  while (1)
 		    {
-			  if (HAL_UART_Receive(&huart1, &rx_data, 1, 100) == HAL_OK)
-			  {
-			      switch(rx_data)
-			      {
-			          case '1': velocidadPWM = 10; break;
-			          case '2': velocidadPWM = 20; break;
-			          case '3': velocidadPWM = 30; break;
-			          case '4': velocidadPWM = 40; break;
-			          case '5': velocidadPWM = 50; break;
-			          case '6': velocidadPWM = 60; break;
-			          case '7': velocidadPWM = 70; break;
-			          case '8': velocidadPWM = 80; break;
-			          case '9': velocidadPWM = 85; break;
-			          case '0': velocidadPWM = 90; break; // Máxima
-			          case 'F': moverAdelante(velocidadPWM); break;
-			          case 'B': moverAtras(velocidadPWM); break;
-			          case 'L': moverIzquierda(velocidadPWM); break;
-			          case 'R': moverDerecha(velocidadPWM); break;
-			          case 'S': detenerMotores(); break;
-			          default:
-			              sprintf(uartBuf, "Comando inválido\r\n");
-			              HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-			              break;
-			      }
-			  }
-			  /*
 			  GPIO_PinState sensorState1 = HAL_GPIO_ReadPin (Sensor1_PORT, Sensor1_PIN);
 			  GPIO_PinState sensorState2 = HAL_GPIO_ReadPin (Sensor2_PORT, Sensor2_PIN);
 			  GPIO_PinState sensorState3 = HAL_GPIO_ReadPin (Sensor3_PORT, Sensor3_PIN);
-			  GPIO_PinState sensorState4 = HAL_GPIO_ReadPin (Sensor4_PORT, Sensor4_PIN);
-			  GPIO_PinState sensorState5 = HAL_GPIO_ReadPin (Sensor5_PORT, Sensor5_PIN);
-			  GPIO_PinState sensorState6 = HAL_GPIO_ReadPin (Sensor6_PORT, Sensor6_PIN);
+			  //GPIO_PinState sensorState4 = HAL_GPIO_ReadPin (Sensor4_PORT, Sensor4_PIN);
+			  //GPIO_PinState sensorState5 = HAL_GPIO_ReadPin (Sensor5_PORT, Sensor5_PIN);
+			  //GPIO_PinState sensorState6 = HAL_GPIO_ReadPin (Sensor6_PORT, Sensor6_PIN);
 			  if (HAL_GPIO_ReadPin(SWITCH_PORT, SWITCH_PIN) == GPIO_PIN_SET)
 				{
 					// Switch activado → medir distancias
 					float d1 = medirDistancia(TRIG1_PORT, TRIG1_PIN, Echo1_PORT, Echo1_PIN);
 					HAL_Delay(60);
 					float d2 = medirDistancia(TRIG2_PORT, TRIG2_PIN, Echo2_PORT, Echo2_PIN);
-					HAL_Delay(60);
-					float d3 = medirDistancia(TRIG3_PORT, TRIG3_PIN, Echo3_PORT, Echo3_PIN);
+					//HAL_Delay(60);
+					//float d3 = medirDistancia(TRIG3_PORT, TRIG3_PIN, Echo3_PORT, Echo3_PIN);
 
-					sprintf(uartBuf, "D1=%.1f | D2=%.1f | D3=%.1f\r\n", d1, d2, d3);
+					sprintf(uartBuf, "D1=%.1f | D2=%.1f\r\n", d1, d2);
 					HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 					HAL_Delay(100);
 
 
-					if ((d1 >= 20) && (d2 >= 20) && (d3 >= 20))
+					if ((d1 >= 20) && (d2 >= 20))
 					{
-						if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_SET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_SET) && (sensorState6 == GPIO_PIN_RESET)))
+						if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_SET) && (sensorState3 == GPIO_PIN_RESET))
 						{
-							moverAdelante();
+							moverAdelante(30);
 							sprintf (uartBuf, "Adelante\r\n");
 							HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
-						 else if (((sensorState1 == GPIO_PIN_SET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_SET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_RESET)))
+						 else if ((sensorState1 == GPIO_PIN_SET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET))
 						 {
-							 moverDerecha();
+							 moverDerecha(30);
 							 //Fondo Blanco (Reflexion)
 							 sprintf (uartBuf, "Derecha\r\n");
 							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
-						 else if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_SET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_SET)))
+						 else if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_SET))
 						 {
-							 moverIzquierda();
+							 moverIzquierda(30);
 						  	 sprintf (uartBuf, "Izquierda\r\n");
 						  	 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
 
-						 else if (((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET)) && ((sensorState4 == GPIO_PIN_RESET) && (sensorState5 == GPIO_PIN_RESET) && (sensorState6 == GPIO_PIN_RESET)))
+						 else if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET))
 						 {
 							 detenerMotores();
 							 sprintf(uartBuf, "Stop\r\n");
 							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
 						 }
-
 						 else
 						 {
 							 detenerMotores();
@@ -284,16 +257,16 @@ int main(void)
 					{
 			      	  switch(rx_data)
 			      	  {
-			          	  case '1': velocidadPWM = 10; break;
-			          	  case '2': velocidadPWM = 20; break;
-			          	  case '3': velocidadPWM = 30; break;
-			          	  case '4': velocidadPWM = 40; break;
-			          	  case '5': velocidadPWM = 50; break;
-			          	  case '6': velocidadPWM = 60; break;
-			          	  case '7': velocidadPWM = 70; break;
-			          	  case '8': velocidadPWM = 80; break;
-			          	  case '9': velocidadPWM = 85; break;
-			          	  case '0': velocidadPWM = 90; break; // Máxima
+			          	  case '1': velocidadPWM = 10; HAL_Delay(30); break;
+			          	  case '2': velocidadPWM = 20; HAL_Delay(30); break;
+			          	  case '3': velocidadPWM = 30; HAL_Delay(30);break;
+			          	  case '4': velocidadPWM = 40; HAL_Delay(30);break;
+			          	  case '5': velocidadPWM = 50; HAL_Delay(30);break;
+			          	  case '6': velocidadPWM = 60; HAL_Delay(30);break;
+			          	  case '7': velocidadPWM = 70; HAL_Delay(30);break;
+			          	  case '8': velocidadPWM = 80; HAL_Delay(30);break;
+			          	  case '9': velocidadPWM = 85; HAL_Delay(30);break;
+			          	  case '0': velocidadPWM = 90; HAL_Delay(30);break; // Máxima
 			          	  case 'F': moverAdelante(velocidadPWM); break;
 			          	  case 'B': moverAtras(velocidadPWM); break;
 			          	  case 'L': moverIzquierda(velocidadPWM); break;
@@ -303,11 +276,10 @@ int main(void)
 			              	  sprintf(uartBuf, "Comando inválido\r\n");
 			              	  HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 			              	  break;
-			      }
-			  }
+			      	  }
+					}
 
 				}
-			  */
 			}
 		   /* USER CODE END 3 */
 }
@@ -689,18 +661,18 @@ void moverAtras(uint16_t velocidad)
 void moverIzquierda(uint16_t velocidad)
 {
   // Motor 1 avanza, Motor 2 se detiene
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, velocidad);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, velocidad);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 }
 
 void moverDerecha(uint16_t velocidad)
 {
   // Motor 2 avanza, Motor 1 se detiene
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, velocidad);
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, velocidad);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 }
 
