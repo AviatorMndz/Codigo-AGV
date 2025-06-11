@@ -67,6 +67,10 @@ void moverAtras(uint16_t velocidad);
 void moverIzquierda(uint16_t velocidad);
 void moverDerecha(uint16_t velocidad);
 void detenerMotores(void);
+void leerSensores(void);
+void enviarUART(UART_HandleTypeDef *huart, const char *msg);
+void modoAutonomo(void);
+void modoBluetooth(void);
 
 /* USER CODE END PFP */
 
@@ -125,6 +129,10 @@ void detenerMotores(void);
 #define Echo3_PORT GPIOB
 #define Echo3_PIN  GPIO_PIN_6
 
+// === VARIABLES GLOBALES ===
+GPIO_PinState s1, s2, s3;
+uint16_t velocidadPWM = 30;
+char uartBuf[32];
 
 /* USER CODE END 0 */
 
@@ -134,154 +142,30 @@ void detenerMotores(void);
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  HAL_Init();
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
 
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1 | GPIO_PIN_4 | GPIO_PIN_5, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_SET);
 
-		//char uartBuf[50];
-		//uint8_t rx_data;
-
-		  /* USER CODE END 1 */
-
-		  /* MCU Configuration--------------------------------------------------------*/
-
-		  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-		  HAL_Init();
-
-		  /* USER CODE BEGIN Init */
-
-		  /* USER CODE END Init */
-
-		  /* Configure the system clock */
-		  SystemClock_Config();
-
-		  /* USER CODE BEGIN SysInit */
-
-		  /* USER CODE END SysInit */
-
-		  /* Initialize all configured peripherals */
-		  MX_GPIO_Init();
-		  MX_USART2_UART_Init();
-		  MX_USART1_UART_Init();
-		  MX_TIM2_Init();
-		  MX_TIM3_Init();
-
-			//Iniciar PWM
-			  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); // Motor 1 RPWM
-			  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); // Motor 1 LPWM
-			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Motor 2 RPWM
-			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4); // Motor 2 LPWM
-
-			  // Puente H
-			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);  // Motor 1 R_EN
-			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);  // Motor 1 L_EN
-			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);  // Motor 2 R_EN
-			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_SET);  // Motor 2 L_EN
-			  char uartBuf[50];
-			  uint8_t rx_data;
-			  uint16_t velocidadPWM = 30;
-
-
-		  while (1)
-		    {
-			  GPIO_PinState sensorState1 = HAL_GPIO_ReadPin (Sensor1_PORT, Sensor1_PIN);
-			  GPIO_PinState sensorState2 = HAL_GPIO_ReadPin (Sensor2_PORT, Sensor2_PIN);
-			  GPIO_PinState sensorState3 = HAL_GPIO_ReadPin (Sensor3_PORT, Sensor3_PIN);
-			  //GPIO_PinState sensorState4 = HAL_GPIO_ReadPin (Sensor4_PORT, Sensor4_PIN);
-			  //GPIO_PinState sensorState5 = HAL_GPIO_ReadPin (Sensor5_PORT, Sensor5_PIN);
-			  //GPIO_PinState sensorState6 = HAL_GPIO_ReadPin (Sensor6_PORT, Sensor6_PIN);
-			  if (HAL_GPIO_ReadPin(SWITCH_PORT, SWITCH_PIN) == GPIO_PIN_SET)
-				{
-					// Switch activado → medir distancias
-					float d1 = medirDistancia(TRIG1_PORT, TRIG1_PIN, Echo1_PORT, Echo1_PIN);
-					HAL_Delay(60);
-					float d2 = medirDistancia(TRIG2_PORT, TRIG2_PIN, Echo2_PORT, Echo2_PIN);
-					//HAL_Delay(60);
-					//float d3 = medirDistancia(TRIG3_PORT, TRIG3_PIN, Echo3_PORT, Echo3_PIN);
-
-					sprintf(uartBuf, "D1=%.1f | D2=%.1f\r\n", d1, d2);
-					HAL_UART_Transmit(&huart2, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-					HAL_Delay(100);
-
-
-					if ((d1 >= 20) && (d2 >= 20))
-					{
-						if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_SET) && (sensorState3 == GPIO_PIN_RESET))
-						{
-							moverAdelante(30);
-							sprintf (uartBuf, "Adelante\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-						 }
-
-						 else if ((sensorState1 == GPIO_PIN_SET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET))
-						 {
-							 moverDerecha(30);
-							 //Fondo Blanco (Reflexion)
-							 sprintf (uartBuf, "Derecha\r\n");
-							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-						 }
-
-						 else if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_SET))
-						 {
-							 moverIzquierda(30);
-						  	 sprintf (uartBuf, "Izquierda\r\n");
-						  	 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-						 }
-
-						 else if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET))
-						 {
-							 detenerMotores();
-							 sprintf(uartBuf, "Stop\r\n");
-							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-						 }
-						 else
-						 {
-							 detenerMotores();
-							 sprintf(uartBuf, "No funciona\r\n");
-							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-						 }
-					}
-					else
-					{
-						detenerMotores();
-						sprintf(uartBuf, "Stop\r\n");
-						HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
-					}
-
-				}
-				else
-				{
-					rx_data = 0;
-					// Switch desactivado → leer comandos Bluetooth
-					if (HAL_UART_Receive(&huart1, &rx_data, 1, 100) == HAL_OK)
-					{
-			      	  switch(rx_data)
-			      	  {
-			          	  case '1': velocidadPWM = 10; HAL_Delay(30); break;
-			          	  case '2': velocidadPWM = 20; HAL_Delay(30); break;
-			          	  case '3': velocidadPWM = 30; HAL_Delay(30);break;
-			          	  case '4': velocidadPWM = 40; HAL_Delay(30);break;
-			          	  case '5': velocidadPWM = 50; HAL_Delay(30);break;
-			          	  case '6': velocidadPWM = 60; HAL_Delay(30);break;
-			          	  case '7': velocidadPWM = 70; HAL_Delay(30);break;
-			          	  case '8': velocidadPWM = 80; HAL_Delay(30);break;
-			          	  case '9': velocidadPWM = 85; HAL_Delay(30);break;
-			          	  case '0': velocidadPWM = 90; HAL_Delay(30);break; // Máxima
-			          	  case 'F': moverAdelante(velocidadPWM); break;
-			          	  case 'B': moverAtras(velocidadPWM); break;
-			          	  case 'L': moverIzquierda(velocidadPWM); break;
-			          	  case 'R': moverDerecha(velocidadPWM); break;
-			          	  case 'S': detenerMotores(); break;
-			          	  default:
-			              	  sprintf(uartBuf, "Comando inválido\r\n");
-			              	  HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
-			              	  break;
-			      	  }
-					}
-
-				}
-			}
-		   /* USER CODE END 3 */
+  while (1)
+  {
+		leerSensores();
+		if (HAL_GPIO_ReadPin(SWITCH_PORT, SWITCH_PIN) == GPIO_PIN_SET)
+			modoAutonomo();
+		else
+			modoBluetooth();
+  }
 }
 
 /**
@@ -606,12 +490,12 @@ static void MX_GPIO_Init(void)
 void delay_us(uint32_t us)
 {
 	if(us < 2) us = 2;
-	TIM2->ARR = us -1; //Pone el valor del ARR
-	TIM2->EGR = 1; //Reiniciamos el timer
-	TIM2->SR &= ~1; //Reiniciar la bandera
-	TIM2->CR1 |= 1;//Iniciamos el contador
-	while ((TIM2->SR&0x0001) !=1); //Esperamos a cumplir un ciclo entero
-	TIM2 -> SR &= ~(0x0001);
+	TIM4->ARR = us -1; //Pone el valor del ARR
+	TIM4->EGR = 1; //Reiniciamos el timer
+	TIM4->SR &= ~1; //Reiniciar la bandera
+	TIM4->CR1 |= 1;//Iniciamos el contador
+	while ((TIM4->SR&0x0001) !=1); //Esperamos a cumplir un ciclo entero
+	TIM4 -> SR &= ~(0x0001);
 }
 
 float medirDistancia(GPIO_TypeDef* trig_port, uint16_t trig_pin, GPIO_TypeDef* echo_port, uint16_t echo_pin) {
@@ -683,6 +567,66 @@ void detenerMotores()
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 }
+
+// Lee sensores infrarrojos
+void leerSensores()
+{
+  s1 = HAL_GPIO_ReadPin(Sensor1_PORT, Sensor1_PIN);
+  s2 = HAL_GPIO_ReadPin(Sensor2_PORT, Sensor2_PIN);
+  s3 = HAL_GPIO_ReadPin(Sensor3_PORT, Sensor3_PIN);
+}
+
+// Control en modo autónomo
+void modoAutonomo()
+{
+  int d1 = (int)(10 * medirDistancia(TRIG1_PORT, TRIG1_PIN, Echo1_PORT, Echo1_PIN));
+  HAL_Delay(60);
+  int d2 = (int)(10 * medirDistancia(TRIG2_PORT, TRIG2_PIN, Echo2_PORT, Echo2_PIN));
+
+  snprintf(uartBuf, sizeof(uartBuf), "D1=%.1f D2=%.1f\r\n", d1 / 10.0, d2 / 10.0);
+  HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+
+  if (d1 >= 200 && d2 >= 200)
+  {
+    if (!s1 && s2 && !s3)        { moverAdelante(30); strcpy(uartBuf, "Adelante\r\n"); }
+    else if (s1 && !s2 && !s3)   { moverDerecha(30); strcpy(uartBuf, "Derecha\r\n"); }
+    else if (!s1 && !s2 && s3)   { moverIzquierda(30); strcpy(uartBuf, "Izquierda\r\n"); }
+    else if (!s1 && !s2 && !s3)  { detenerMotores();  strcpy(uartBuf, "Stop\r\n"); }
+    else                         { detenerMotores();  strcpy(uartBuf, "No funciona\r\n"); }
+  }
+  else
+  {
+    detenerMotores();
+    strcpy(uartBuf, "Stop\r\n");
+  }
+
+  HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+}
+
+// Control por Bluetooth
+void modoBluetooth()
+{
+  uint8_t rx_data;
+  if (HAL_UART_Receive(&huart1, &rx_data, 1, 100) == HAL_OK)
+  {
+    if (rx_data >= '0' && rx_data <= '9')
+      velocidadPWM = (rx_data == '0') ? 90 : (rx_data - '0') * 10;
+
+    switch (rx_data)
+    {
+      case 'F': moverAdelante(velocidadPWM); break;
+      case 'B': moverAtras(velocidadPWM); break;
+      case 'L': moverIzquierda(velocidadPWM); break;
+      case 'R': moverDerecha(velocidadPWM); break;
+      case 'S': detenerMotores(); break;
+      default:
+        strcpy(uartBuf, "Comando invalido\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
+        break;
+    }
+  }
+}
+
 /* USER CODE END 4 */
 
 /**
