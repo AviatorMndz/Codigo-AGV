@@ -66,6 +66,7 @@ void moverAdelante(uint16_t velocidad);
 void moverAtras(uint16_t velocidad);
 void moverIzquierda(uint16_t velocidad);
 void moverDerecha(uint16_t velocidad);
+void prenderDer(uint16_t vel);
 void detenerMotores(void);
 
 /* USER CODE END PFP */
@@ -124,6 +125,7 @@ void detenerMotores(void);
 
 #define Echo3_PORT GPIOB
 #define Echo3_PIN  GPIO_PIN_6
+
 
 
 /* USER CODE END 0 */
@@ -208,44 +210,43 @@ int main(void)
 					{
 						if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_SET) && (sensorState3 == GPIO_PIN_RESET))
 						{
-							moverAdelante(30);
+							moverAdelante(velocidadPWM);
 							sprintf (uartBuf, "Adelante\r\n");
-							HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if ((sensorState1 == GPIO_PIN_SET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET))
 						 {
-							 moverDerecha(30);
-							 //Fondo Blanco (Reflexion)
+							 moverDerecha(velocidadPWM);
 							 sprintf (uartBuf, "Derecha\r\n");
-							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							 HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_SET))
 						 {
-							 moverIzquierda(30);
+							 moverIzquierda(velocidadPWM);
 						  	 sprintf (uartBuf, "Izquierda\r\n");
-						  	 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+						  	 HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 						 }
 
 						 else if ((sensorState1 == GPIO_PIN_RESET) && (sensorState2 == GPIO_PIN_RESET) && (sensorState3 == GPIO_PIN_RESET))
 						 {
 							 detenerMotores();
 							 sprintf(uartBuf, "Stop\r\n");
-							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							 HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 						 }
 						 else
 						 {
 							 detenerMotores();
 							 sprintf(uartBuf, "No funciona\r\n");
-							 HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+							 HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 						 }
 					}
 					else
 					{
 						detenerMotores();
 						sprintf(uartBuf, "Stop\r\n");
-						HAL_UART_Transmit(&huart1, (uint8_t*)uartBuf, strlen(uartBuf), 100);
+						HAL_UART_Transmit(&huart1, (uint8_t *)uartBuf, strlen(uartBuf), 100);
 					}
 
 				}
@@ -280,7 +281,7 @@ int main(void)
 					}
 
 				}
-			}
+			} // xd----------------------
 		   /* USER CODE END 3 */
 }
 
@@ -599,7 +600,7 @@ static void MX_GPIO_Init(void)
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
-}
+}//-----------------------------------------------------------
 
 /* USER CODE BEGIN 4 */
 
@@ -675,6 +676,7 @@ void moverDerecha(uint16_t velocidad)
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 }
+
 
 void detenerMotores()
 {
